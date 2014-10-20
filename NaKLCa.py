@@ -13,9 +13,6 @@ import matplotlib.pyplot as plt
 
 # The I_SK is taken from Arij's model. 
 
-### Define global parameters (probably not best practice, but I don't
-### feel like passing all the arguments)
-
 gNa = 120.0 # mS/cm^2
 gK = 20.0 
 gL = .30 
@@ -31,7 +28,7 @@ EL = -54.4 #mV
 # The form of the sigmoid funcions is f(V) = 1/(1+exp((V-theta)/sigma))
 # this is = 0.5(1+tanh((V-th)/(-2*sig)));
 
-# In BioCyb va = th_a; dva = -2*sig_a
+# In BioCyb V_a = th_a; dV_a = -2*sig_a
 
 th_m = -40.0 #mV
 th_h = -60.0 #mV
