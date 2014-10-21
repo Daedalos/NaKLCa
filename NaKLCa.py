@@ -51,7 +51,7 @@ t1_s = 9.0 # s-variable was not originally included in NaKL (came from Arij). Co
 
 
 CaExt = 2500.0 # uM
-k_s = 0.5 # uM
+k_s = 0.25 # uM
 
 eps = 7.5e-3 # uM*cm^2/uA/ms
 kCa = 0.3 # uM
@@ -127,7 +127,7 @@ def run():
     # Initial Conditions
     init = [-70.0, 1.0, 0.1, 0.1, 0.1, 0.1]
     # Total Integration time and 
-    T = 100.0
+    T = 300.0
     # output time steps
     dt = 0.01
 
@@ -177,8 +177,18 @@ def run():
     ax2[2,1].plot(ttmp, inj[:len(ttmp)]/Isa)
     ax2[2,1].set_title("I_Inj")
 
+    fig3, ax3 = plt.subplots(2,1)
+
+    ax3[0].plot(times, sim[:,0])
+    ax3[0].set_title("Voltage (mV)")
+    ax3[1].plot(ttmp, inj[:len(ttmp)]/Isa)
+    ax3[1].set_title("Inj Current")
+
+
     fig.subplots_adjust(hspace=.5)
     fig2.subplots_adjust(hspace=.5)
+
+    plt.tight_layout()
     plt.show()
         
 if __name__ == '__main__':
