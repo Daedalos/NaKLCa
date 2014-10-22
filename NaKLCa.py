@@ -138,15 +138,15 @@ class NaKLCa_Neuron:
                              + self.I_SK(V,Ca) + self.I_CaL(V,Ca,s) 
                              + self.Iinj(t,current,tstep))
 
-        dCadt = self.f*(self.eps*I_CaL(V,Ca,s) + self.kCa*(self.bCa - Ca))     
-        dmdt = ((gating_inf(V,self.th_m,self.sig_m)-m)
-                / tau(V,self.t0_m,self.t1_m,self.th_m,self.sig_m))
-        dhdt = ((gating_inf(V,self.th_h,self.sig_h)-h)
-                / tau(V,self.t0_h,self.t1_h,self.th_h,self.sig_h))
-        dndt = ((gating_inf(V,self.th_n,self.sig_n)-n)
-                / tau(V,self.t0_n,self.t1_n,self.th_n,self.sig_n))
-        dsdt = ((gating_inf(V,self.th_s,self.sig_s)-s)
-                / tau(V,self.t0_s,self.t1_s,self.th_s,self.sig_s))
+        dCadt = self.f*(self.eps*self.I_CaL(V,Ca,s) + self.kCa*(self.bCa - Ca))     
+        dmdt = ((self.gating_inf(V,self.th_m,self.sig_m)-m)
+                / self.tau(V,self.t0_m,self.t1_m,self.th_m,self.sig_m))
+        dhdt = ((self.gating_inf(V,self.th_h,self.sig_h)-h)
+                / self.tau(V,self.t0_h,self.t1_h,self.th_h,self.sig_h))
+        dndt = ((self.gating_inf(V,self.th_n,self.sig_n)-n)
+                / self.tau(V,self.t0_n,self.t1_n,self.th_n,self.sig_n))
+        dsdt = ((self.gating_inf(V,self.th_s,self.sig_s)-s)
+                / self.tau(V,self.t0_s,self.t1_s,self.th_s,self.sig_s))
 
         return dVdt, dCadt, dmdt, dhdt, dndt, dsdt
     
@@ -165,7 +165,7 @@ class NaKLCa_Neuron:
         injdt = self.injdt
         
 
-        fig, ax = plt.subplots(3,2)        
+        fig, ax = plt.subplots(3,2,sharex=True)        
         ax[0,0].plot(times,sim[:,0])
         ax[0,0].set_title('Voltage')
         ax[0,1].plot(times,sim[:,1])
@@ -179,32 +179,28 @@ class NaKLCa_Neuron:
         ax[2,1].plot(times,sim[:,5])
         ax[2,1].set_title('s (CaL act)')
 
-        fig2, ax2 = plt.subplots(3,2)
-        ax2[0,0].plot(times,I_Na(sim[:,0],sim[:,2],sim[:,3]))
+        fig2, ax2 = plt.subplots(3,2,sharex=True)
+        ax2[0,0].plot(times,self.I_Na(sim[:,0],sim[:,2],sim[:,3]))
         ax2[0,0].set_title('I_Na (\mu A/cm^2)')
-        ax2[0,1].plot(times,I_K(sim[:,0],sim[:,4]))
+        ax2[0,1].plot(times,self.I_K(sim[:,0],sim[:,4]))
         ax2[0,1].set_title('I_K (\mu A/cm^2)')
-        ax2[1,0].plot(times,I_L(sim[:,0]))
+        ax2[1,0].plot(times,self.I_L(sim[:,0]))
         ax2[1,0].set_title('I_L (\mu A/cm^2)')
-        ax2[1,1].plot(times,I_SK(sim[:,0], sim[:,1]))
+        ax2[1,1].plot(times,self.I_SK(sim[:,0], sim[:,1]))
         ax2[1,1].set_title("I_SK (\mu A/cm^2)")
-        ax2[2,0].plot(times,I_CaL(sim[:,0],sim[:,1],sim[:,5]))
+        ax2[2,0].plot(times,self.I_CaL(sim[:,0],sim[:,1],sim[:,5]))
         ax2[2,0].set_title("I_CaL (\mu A/cm^2)")             
 
-        ttmp = sp.arange(0,T,injdt)
-        ax2[2,1].plot(ttmp, inj[:len(ttmp)]/Isa)
+        ttmp = sp.arange(0,self.Tfinal,self.injdt)
+        ax2[2,1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
         ax2[2,1].set_title("I_Inj")
 
-        fig3, ax3 = plt.subplots(2,1)
+        fig3, ax3 = plt.subplots(2,1,sharex=True)
 
         ax3[0].plot(times, sim[:,0])
         ax3[0].set_title("Voltage (mV)")
-        ax3[1].plot(ttmp, inj[:len(ttmp)]/Isa)
+        ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
         ax3[1].set_title("Inj Current")
-
-
-        fig.subplots_adjust(hspace=.5)
-        fig2.subplots_adjust(hspace=.5)
 
         plt.tight_layout()
         plt.show()
