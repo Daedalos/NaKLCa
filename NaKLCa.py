@@ -31,8 +31,6 @@ class NaKLCa_Neuron:
         self.injdt = 5.0
         #inj = sp.loadtxt('current_l63.txt')
         #injdt = 0.01
-        self.times = sp.arange(0,self.Tfinal,self.dt)
-
 
         self.gNa = 120.0 # mS/cm^2
         #gNa = 0.0
@@ -155,6 +153,7 @@ class NaKLCa_Neuron:
     
         # Parameters passed are current data array, along with time step
         # between current data points
+        self.times = sp.arange(0,self.Tfinal,self.dt)
         self.sim = odeint(self.eqns,self.init,self.times,(self.inj,self.injdt))
         sp.savetxt('simulation.txt',sp.column_stack((self.times,self.sim)))
 
@@ -178,6 +177,7 @@ class NaKLCa_Neuron:
         ax[2,0].set_title('n (K act)')
         ax[2,1].plot(times,sim[:,5])
         ax[2,1].set_title('s (CaL act)')
+        fig.tight_layout()
 
         fig2, ax2 = plt.subplots(3,2,sharex=True)
         ax2[0,0].plot(times,self.I_Na(sim[:,0],sim[:,2],sim[:,3]))
@@ -190,6 +190,7 @@ class NaKLCa_Neuron:
         ax2[1,1].set_title("I_SK (\mu A/cm^2)")
         ax2[2,0].plot(times,self.I_CaL(sim[:,0],sim[:,1],sim[:,5]))
         ax2[2,0].set_title("I_CaL (\mu A/cm^2)")             
+        fig2.tight_layout()
 
         ttmp = sp.arange(0,self.Tfinal,self.injdt)
         ax2[2,1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
@@ -201,12 +202,18 @@ class NaKLCa_Neuron:
         ax3[0].set_title("Voltage (mV)")
         ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
         ax3[1].set_title("Inj Current")
+        fig3.tight_layout()
 
-        plt.tight_layout()
         plt.show()
         
 if __name__ == '__main__':
     neuron1 = NaKLCa_Neuron()
+    neuron1.gSK = 7.1
+    neuron1.gCaL = 0.05
+    neuron1.t1_s = 0.5
+    neuron1.t0_s = 0.1
+    neuron1.injdt = 20.0
+    neuron1.Tfinal = 2000
     neuron1.run()
     neuron1.plot()
     
