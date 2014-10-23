@@ -20,7 +20,7 @@ class NaKLCa_Neuron:
         # Initial Conditions
         self.init = [-70.0, 1.0, 0.1, 0.1, 0.1, 0.1]
         # Total Integration time and 
-        self.Tfinal = 300.0
+        self.Tfinal = 1200.0
         # output time steps
         self.dt = 0.01
 
@@ -28,7 +28,7 @@ class NaKLCa_Neuron:
         #data points in file. Will linearly interpolate for intermediate
         #points
         self.inj = sp.loadtxt('current_sq.txt')
-        self.injdt = 5.0
+        self.injdt = 25.0
         #inj = sp.loadtxt('current_l63.txt')
         #injdt = 0.01
 
@@ -36,8 +36,8 @@ class NaKLCa_Neuron:
         #gNa = 0.0
         self.gK = 20.0 
         self.gL = .30 
-        self.gSK = 9.5
-        self.gCaL = 0.005
+        self.gSK = 7.5
+        self.gCaL = 0.05
         #gCaL = 0.005 # mS/cm^2/uM(micromolar) - This is different because uses GHK form of current
         #gSK = 9.1 
 
@@ -68,7 +68,7 @@ class NaKLCa_Neuron:
         self.t1_m = 0.4 #ms
         self.t1_h = 7.0 
         self.t1_n = 5.0
-        self.t1_s = 9.0 # s-variable was not originally included in NaKL (came from Arij). Constant tau_s = t0_s seems as valid as anything else
+        self.t1_s = 0.4 # s-variable was not originally included in NaKL (came from Arij). Constant tau_s = t0_s seems as valid as anything else
 
 
         self.CaExt = 2500.0 # uM
@@ -207,14 +207,24 @@ class NaKLCa_Neuron:
         plt.show()
         
 if __name__ == '__main__':
+
     neuron1 = NaKLCa_Neuron()
-    neuron1.gSK = 7.1
-    neuron1.gCaL = 0.05
-    neuron1.t1_s = 0.5
-    neuron1.t0_s = 0.1
-    neuron1.injdt = 20.0
-    neuron1.Tfinal = 2000
-    neuron1.run()
-    neuron1.plot()
+    t1_minit = neuron1.t1_m
+    fig, ax = plt.subplots(6, sharex=True)
+    for i in range(5):
+        neuron1.t1_m = 5.0**(i-3)*t1_minit
+        neuron1.run()
+        ax[i].plot(neuron1.times,neuron1.sim[:,0])
+        ax[i].set_title("Voltage (mV), with t1_m = {}".format(neuron1.t1_m))
+
+    ttmp = sp.arange(0,neuron1.Tfinal,neuron1.injdt)
+    ax[5].plot(ttmp, neuron1.inj[:len(ttmp)]/neuron1.Isa)
+    ax[5].set_title("Inj Current (\mu A)")
+    ax[5].set_xlabel("Time (ms)")
+    fig.tight_layout()
+    plt.show()
+
+#    neuron1.run()
+ #   neuron1.plot()
     
     
