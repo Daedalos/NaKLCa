@@ -18,7 +18,7 @@ class NaKLCa_Neuron:
     def __init__(self):
         
         # Initial Conditions
-        self.init = [-70.0, 1.0, 0.1, 0.1, 0.1, 0.1]
+        self.init = [-70.0, -70.0, 1.0, 0.1, 0.1, 0.1, 0.1]
         # Total Integration time and 
         self.Tfinal = 1200.0
         # output time steps
@@ -32,7 +32,7 @@ class NaKLCa_Neuron:
         #inj = sp.loadtxt('current_l63.txt')
         #injdt = 0.01
 
-        self.gNa = 120.0 # mS/cm^2
+        self.gNa = 120.0 # nS
         #gNa = 0.0
         self.gK = 20.0 
         self.gL = .30 
@@ -74,14 +74,15 @@ class NaKLCa_Neuron:
         self.CaExt = 2500.0 # uM
         self.k_s = 0.25 # uM
 
-        self.eps = 7.5e-3 # uM*cm^2/uA/ms
-        self.kCa = 0.3 # uM
+        self.phi = 75. # uM*cm^2/uA/ms
+        self.kCa = 0.3 # 1/ms
+#        self.kCa = 0.05 
         self.bCa = 0.24 # uM
-        self.C = 1.0 # uF/cm^2
+        self.C = 1.0 # uF
 
 
         #PROBABLY NOT for estimation
-        self.Isa = 1.0e6 #uA/pA. Scaling for Iinj: Iinj/Isa should be in [uA]
+        self.Isa = 1.0e6 #nA/pA. Scaling for Iinj: Iinj/Isa should be in [uA]
         self.f = 0.1 #unitless. Fraction of Free/Total cytosolic Ca^2+. Degenerate with params kCa, bCa.
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
@@ -130,23 +131,24 @@ class NaKLCa_Neuron:
             return Ivalue[idx] + slope*(t-idx*step)    
     
     def eqns(self,x, t, current, tstep):
-        V, Ca, m, h, n, s = x            
+        Vs, Vd, Ca, m, h, n, s = x            
 
-        dVdt = 1.0/self.C * (self.I_Na(V,m,h) + self.I_K(V,n) + self.I_L(V) 
-                             + self.I_SK(V,Ca) + self.I_CaL(V,Ca,s) 
-                             + self.Iinj(t,current,tstep))
+        dVsdt = 1.0/self.C * (self.I_Na(Vs,m,h) + self.I_K(Vs,n) + self.I_L(Vs) + (Vd-Vs) )                             
 
-        dCadt = self.f*(self.eps*self.I_CaL(V,Ca,s) + self.kCa*(self.bCa - Ca))     
-        dmdt = ((self.gating_inf(V,self.th_m,self.sig_m)-m)
-                / self.tau(V,self.t0_m,self.t1_m,self.th_m,self.sig_m))
-        dhdt = ((self.gating_inf(V,self.th_h,self.sig_h)-h)
-                / self.tau(V,self.t0_h,self.t1_h,self.th_h,self.sig_h))
-        dndt = ((self.gating_inf(V,self.th_n,self.sig_n)-n)
-                / self.tau(V,self.t0_n,self.t1_n,self.th_n,self.sig_n))
-        dsdt = ((self.gating_inf(V,self.th_s,self.sig_s)-s)
-                / self.tau(V,self.t0_s,self.t1_s,self.th_s,self.sig_s))
+        dVddt = 1.0/self.C * (+ self.I_SK(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
+                              + self.Iinj(t,current,tstep)/self.Isa + (Vs-Vd))
 
-        return dVdt, dCadt, dmdt, dhdt, dndt, dsdt
+        dCadt = self.f*(self.phi*self.I_CaL(Vd,Ca,s) + self.kCa*(self.bCa - Ca))     
+        dmdt = ((self.gating_inf(Vs,self.th_m,self.sig_m)-m)
+                / self.tau(Vs,self.t0_m,self.t1_m,self.th_m,self.sig_m))
+        dhdt = ((self.gating_inf(Vs,self.th_h,self.sig_h)-h)
+                / self.tau(Vs,self.t0_h,self.t1_h,self.th_h,self.sig_h))
+        dndt = ((self.gating_inf(Vs,self.th_n,self.sig_n)-n)
+                / self.tau(Vs,self.t0_n,self.t1_n,self.th_n,self.sig_n))
+        dsdt = ((self.gating_inf(Vd,self.th_s,self.sig_s)-s)
+                / self.tau(Vs,self.t0_s,self.t1_s,self.th_s,self.sig_s))
+
+        return dVsdt, dVddt, dCadt, dmdt, dhdt, dndt, dsdt
     
 
     def run(self):
@@ -163,6 +165,7 @@ class NaKLCa_Neuron:
         inj = self.inj
         injdt = self.injdt
         
+        import ipdb; ipdb.set_trace()
 
         fig, ax = plt.subplots(3,2,sharex=True)        
         ax[0,0].plot(times,sim[:,0])
@@ -180,7 +183,7 @@ class NaKLCa_Neuron:
         fig.tight_layout()
 
         fig2, ax2 = plt.subplots(3,2,sharex=True)
-        ax2[0,0].plot(times,self.I_Na(sim[:,0],sim[:,2],sim[:,3]))
+        ax2[0,0].plot(times,self.I_Na(sim[:,0],sim[:,3],sim[:,4]))
         ax2[0,0].set_title('I_Na (\mu A/cm^2)')
         ax2[0,1].plot(times,self.I_K(sim[:,0],sim[:,4]))
         ax2[0,1].set_title('I_K (\mu A/cm^2)')
@@ -188,43 +191,46 @@ class NaKLCa_Neuron:
         ax2[1,0].set_title('I_L (\mu A/cm^2)')
         ax2[1,1].plot(times,self.I_SK(sim[:,0], sim[:,1]))
         ax2[1,1].set_title("I_SK (\mu A/cm^2)")
-        ax2[2,0].plot(times,self.I_CaL(sim[:,0],sim[:,1],sim[:,5]))
+        ax2[2,0].plot(times,self.I_CaL(sim[:,1],sim[:,2],sim[:,6]))
         ax2[2,0].set_title("I_CaL (\mu A/cm^2)")             
         fig2.tight_layout()
 
         ttmp = sp.arange(0,self.Tfinal,self.injdt)
         ax2[2,1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
         ax2[2,1].set_title("I_Inj")
-
-        fig3, ax3 = plt.subplots(2,1,sharex=True)
-
-        ax3[0].plot(times, sim[:,0])
-        ax3[0].set_title("Voltage (mV)")
-        ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
-        ax3[1].set_title("Inj Current")
-        fig3.tight_layout()
+#
+#        fig3, ax3 = plt.subplots(2,1,sharex=True)
+#
+#        ax3[0].plot(times, sim[:,0])
+#        ax3[0].set_title("Voltage (mV)")
+#        ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
+#        ax3[1].set_title("Inj Current")
+#        fig3.tight_layout()
 
         plt.show()
         
 if __name__ == '__main__':
 
     neuron1 = NaKLCa_Neuron()
-    t1_minit = neuron1.t1_m
-    fig, ax = plt.subplots(6, sharex=True)
-    for i in range(5):
-        neuron1.t1_m = 5.0**(i-3)*t1_minit
-        neuron1.run()
-        ax[i].plot(neuron1.times,neuron1.sim[:,0])
-        ax[i].set_title("Voltage (mV), with t1_m = {}".format(neuron1.t1_m))
+#    t0_sinit = neuron1.t0_s
+#    t1_sinit = neuron1.t1_s
+#    fig, ax = plt.subplots(6, sharex=True)
+#    for i in range(5):
+#        neuron1.t0_s = 5.0**(i-3)*t0_sinit
+#        neuron1.t1_s = 5.0**(i-3)*t1_sinit
+#        neuron1.run()
+#        ax[i].plot(neuron1.times,neuron1.sim[:,0])
+#        ax[i].set_title("Voltage (mV), with t0_s = {}".format(neuron1.t0_s))
+#
+#    ttmp = sp.arange(0,neuron1.Tfinal,neuron1.injdt)
+#    ax[5].plot(ttmp, neuron1.inj[:len(ttmp)]/neuron1.Isa)
+#    ax[5].set_title("Inj Current (\mu A)")
+#    ax[5].set_xlabel("Time (ms)")
+#    fig.tight_layout()
+#    plt.show()
 
-    ttmp = sp.arange(0,neuron1.Tfinal,neuron1.injdt)
-    ax[5].plot(ttmp, neuron1.inj[:len(ttmp)]/neuron1.Isa)
-    ax[5].set_title("Inj Current (\mu A)")
-    ax[5].set_xlabel("Time (ms)")
-    fig.tight_layout()
-    plt.show()
 
-#    neuron1.run()
- #   neuron1.plot()
+    neuron1.run()
+    neuron1.plot()
     
     
