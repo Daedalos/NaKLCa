@@ -20,55 +20,38 @@ class NaKLCa_Neuron:
         # Initial Conditions
         self.init = [-70.0, -70.0, 1.0, 0.1, 0.7, 0.1, 0.1]
         # Total Integration time and 
-        self.Tfinal = 2500.0
+        self.Tfinal = 2400.0
         # output time steps
         self.dt = 0.01
 
         #Injected current file. Also need to specify time-step between
         #data points in file. Will linearly interpolate for intermediate
         #points
-        self.inj = sp.loadtxt('current_sq.txt')
-        self.injdt = 50.0
+        self.inj = sp.loadtxt('current_sq_nA.txt')
         #inj = sp.loadtxt('current_l63.txt')
-        #injdt = 0.01
+        self.injdt = 0.01
 
-        self.gNa = 120.0 # nS
-        #gNa = 0.0
-        self.gK = 20.0 
-        self.gL = .30 
-        self.gSK = 35.0
-        self.gCaL = 0.015
-        self.phi = 0.0001 # uM*cm^2/uA/ms
-        #gCaL = 0.005 # mS/cm^2/uM(micromolar) - This is different because uses GHK form of current
-        #gSK = 9.1 
 
-#        self.gNa = 1.20 # nS
-#        #gNa = 0.0
-#        self.gK = .20 
-#        self.gL = .0030 
-#        self.gSK = 0.500
-#        self.gCaL = 0.00015
-#        self.phi = 0.01 # uM*cm^2/uA/ms
 
+        self.gNa = 1.20 # nS
+        self.gK = 0.20 
+        self.gL = 0.003 
+        self.gKCa = 0.35
+        self.gCaL = 0.00015  # uS/uM
+        self.phi = 0.01 # uM/ms/nA
 
         self.ENa = 50.0 #mV
         self.EK = -77.0 #mV
         self.EL = -80.4 #mV
 
-        # The form of the sigmoid funcions is f(V) =
-        # 1/(1+exp((V-theta)/sigma)) this is =
-        # 0.5(1+tanh((V-th)/(-2*sig)));
-
-        # In BioCyb V_a = th_a; dV_a = -2*sig_a
-
         self.th_m = -40.0 #mV
         self.th_h = -60.0 #mV
         self.th_n = -55.0 #mV
         self.th_s = -40.2 #mV
-        self.sig_m = -7.5 #mV
-        self.sig_h = 7.5 #mV
-        self.sig_n = -15.0 #mV
-        self.sig_s = -8.0 #mV
+        self.sig_m = 15.0 #mV
+        self.sig_h = -15.0 #mV
+        self.sig_n = 30.0 #mV
+        self.sig_s = 16.0 #mV
 
         self.t0_m = 0.1 #ms
         self.t0_h = 1.0 #ms
@@ -78,30 +61,26 @@ class NaKLCa_Neuron:
         self.t1_m = 0.4 #ms
         self.t1_h = 7.0 
         self.t1_n = 5.0
-        self.t1_s = 0.2 # s-variable was not originally included in NaKL (came from Arij). Constant tau_s = t0_s seems as valid as anything else
-
+        self.t1_s = 0.2 
 
         self.CaExt = 2500.0 # uM
         self.k_s = 2.5 # uM
 
 
-        self.kCa = 0.01 # 1/ms
-#        self.kCa = 0.05 
-        self.bCa = 0.2 # uM
-        self.C = 1.0 # uF
-        #self.C = 0.01 # uF
+        self.t_Ca = 50.0 # ms
+        self.Ca0 = 0.2 # uM
+        self.C = 0.01 # uF
 
-        self.gSD = 1.0 #Conductances between Soma/Dendrite
+
+        self.gSD = 0.01 #Conductances between Soma/Dendrite
 
 
         #PROBABLY NOT for estimation
-        self.Isa = 6.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
-        self.f = 1.0 #unitless. Fraction of Free/Total cytosolic Ca^2+. Degenerate with params kCa, bCa.
+        self.Isa = 1.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
+
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
-        
-
-
+      
     def I_Na(self,V,m,h):   return self.gNa * m**3 * h * (self.ENa-V)
 
     def I_K(self,V,n):      return self.gK * n**4 * (self.EK-V)
@@ -111,9 +90,9 @@ class NaKLCa_Neuron:
 
     # This is SK current from Arij's model. I *think* SK is a specific
     # class of Ca-gated K currents
-    def I_SK(self, V, Ca):
+    def I_KCa(self, V, Ca):
         kinf = Ca**self.p/(Ca**self.p + self.k_s**self.p)
-        return self.gSK * kinf * (self.EK-V)
+        return self.gKCa * kinf * (self.EK-V)
 
     def I_CaL(self, V, Ca,s):
         #23.209 is 2*F/R in K/mV
@@ -123,13 +102,15 @@ class NaKLCa_Neuron:
 
     def gating_inf(self, V,theta,sigma): 
     # Using exponential form for straightforward comparison with other
-        # neuron models/parameters
-        return 1.0/(1+sp.exp((V-theta)/sigma))
+    # neuron models/parameters
+        #return 1.0/(1+sp.exp((V-theta)/sigma))
+        return 0.5*(1.0+sp.tanh((V-theta)/sigma))
 
     def tau(self, V,t0,t1,theta,sigma):
         # I am using the exponetial form of x_inf(V), so there's a
         # relative factor of (-2) in the sigma.
-        return t0 + t1*(1.0-sp.tanh((V-theta)/(-2.0*sigma))**2)    
+        #return t0 + t1*(1.0-sp.tanh((V-theta)/(-2.0*sigma))**2)    
+        return t0 + t1*(1.0-sp.tanh((V-theta)/(sigma))**2)    
     
     # Give this function an array of current values and the time step
     # between them, it will interpolate using a simple line between
@@ -149,11 +130,11 @@ class NaKLCa_Neuron:
         dVsdt = 1.0/self.C * (self.I_Na(Vs,m,h) + self.I_K(Vs,n) 
                               + self.I_L(Vs) + self.gSD*(Vd-Vs)) 
 
-        dVddt = 1.0/self.C * (self.I_SK(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
+        dVddt = 1.0/self.C * (self.I_KCa(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
                               + self.Iinj(t,current,tstep)/self.Isa 
                               + self.I_L(Vs) + self.gSD*(Vs-Vd))
 
-        dCadt = self.f*(self.phi*self.I_CaL(Vd,Ca,s) + self.kCa*(self.bCa - Ca))     
+        dCadt = self.phi*self.I_CaL(Vd,Ca,s) + (self.Ca0 - Ca)/self.t_Ca
         dmdt = ((self.gating_inf(Vs,self.th_m,self.sig_m)-m)
                 / self.tau(Vs,self.t0_m,self.t1_m,self.th_m,self.sig_m))
         dhdt = ((self.gating_inf(Vs,self.th_h,self.sig_h)-h)
@@ -182,10 +163,10 @@ class NaKLCa_Neuron:
 
         fig, ax = plt.subplots(3,2,sharex=True)        
         ax[0,0].plot(times,sim[:,0])
-        ax[0,0].set_title('Voltage Soma')
+        ax[0,0].set_title('Voltage Soma (mV)')
         ax[0,1].plot(times,sim[:,1])
-        ax[0,1].set_title('Voltage Dend')
-        ax[1,0].set_title('Calcium')
+        ax[0,1].set_title('Voltage Dend (mV)')
+        ax[1,0].set_title('Internal Calcium ($\mu$M)')
         ax[1,0].plot(times,sim[:,2])
         ax[1,1].set_title('m (Na act)')
         ax[1,1].plot(times,sim[:,3])
@@ -198,15 +179,15 @@ class NaKLCa_Neuron:
 
         fig2, ax2 = plt.subplots(3,2,sharex=True)
         ax2[0,0].plot(times,self.I_Na(sim[:,0],sim[:,3],sim[:,4]))
-        ax2[0,0].set_title('I_Na (\mu A/cm^2)')
+        ax2[0,0].set_title('$I_{Na}$ (nA)')
         ax2[0,1].plot(times,self.I_K(sim[:,0],sim[:,5]))
-        ax2[0,1].set_title('I_K (\mu A/cm^2)')
+        ax2[0,1].set_title('$I_K$ (nA)')
         ax2[1,0].plot(times,self.I_L(sim[:,0]))
-        ax2[1,0].set_title('I_L (\mu A/cm^2)')
-        ax2[1,1].plot(times,self.I_SK(sim[:,1], sim[:,2]))
-        ax2[1,1].set_title("I_SK (\mu A/cm^2)")
+        ax2[1,0].set_title('$I_L$ (nA)')
+        ax2[1,1].plot(times,self.I_KCa(sim[:,1], sim[:,2]))
+        ax2[1,1].set_title("$I_{KCa}$ (nA)")
         ax2[2,0].plot(times,self.I_CaL(sim[:,1],sim[:,2],sim[:,6]))
-        ax2[2,0].set_title("I_CaL (\mu A/cm^2)")             
+        ax2[2,0].set_title("$I_{CaL}$ (nA)")             
         fig2.tight_layout()
 
         ttmp = sp.arange(0,self.Tfinal,self.injdt)
