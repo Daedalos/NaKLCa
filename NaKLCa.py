@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 # exact GHK rather than the Taylor series because Scipy can handle the
 # the 0/0 divergence at V=0.
 
-# The I_SK is taken from Arij's model, with some parameter values
-# taken from Nogaret
 
 class NaKLCa_Neuron:
     def __init__(self):
@@ -28,75 +26,66 @@ class NaKLCa_Neuron:
         #data points in file. Will linearly interpolate for intermediate
         #points
         self.inj = sp.loadtxt('current_sq.txt')
-        self.injdt = 50.0
+        self.injdt = 10.0
         #inj = sp.loadtxt('current_l63.txt')
         #injdt = 0.01
 
-        self.gNa = 120.0 # nS
+        self.gNa = 120. # uS
         #gNa = 0.0
-        self.gK = 20.0 
-        self.gL = .30 
-        self.gSK = 50.0
-        self.gCaL = 0.015
-        self.phi = 0.0001 # uM*cm^2/uA/ms
-        #gCaL = 0.005 # mS/cm^2/uM(micromolar) - This is different because uses GHK form of current
-        #gSK = 9.1 
+        self.gK = 20.
+        self.gL = 0.30 
+        self.gKCa = 9.375
+        self.gCaL = 0.035
+        self.phi = 1.0e-6 # uM*cm^2/nA/ms
 
-#        self.gNa = 1.20 # nS
-#        #gNa = 0.0
-#        self.gK = .20 
-#        self.gL = .0030 
-#        self.gSK = 0.500
-#        self.gCaL = 0.00015
-#        self.phi = 0.01 # uM*cm^2/uA/ms
-
+        self.gLd = 0.014
 
         self.ENa = 50.0 #mV
         self.EK = -77.0 #mV
-        self.EL = -80.4 #mV
+        self.EL = -54.4 #mV
 
         # The form of the sigmoid funcions is f(V) =
         # 1/(1+exp((V-theta)/sigma)) this is =
-        # 0.5(1+tanh((V-th)/(-2*sig)));
-
+        # 0.5(1+tanh((V-th)/(-2*sig)));        
         # In BioCyb V_a = th_a; dV_a = -2*sig_a
 
         self.th_m = -40.0 #mV
         self.th_h = -60.0 #mV
         self.th_n = -55.0 #mV
-        self.th_s = -40.2 #mV
-        self.sig_m = -7.5 #mV
-        self.sig_h = 7.5 #mV
-        self.sig_n = -15.0 #mV
-        self.sig_s = -8.0 #mV
+        self.th_s = -13.32 #mV
+        self.sig_m = 15.0 #mV
+        self.sig_h = -15.0 #mV
+        self.sig_n = 30.0 #mV
+        self.sig_s = 16.0 #mV
 
         self.t0_m = 0.1 #ms
         self.t0_h = 1.0 #ms
         self.t0_n = 1.0 #ms
-        self.t0_s = 0.1 #ms
+        self.t0_s = 0.2 #ms
 
         self.t1_m = 0.4 #ms
         self.t1_h = 7.0 
         self.t1_n = 5.0
-        self.t1_s = 0.2 # s-variable was not originally included in NaKL (came from Arij). Constant tau_s = t0_s seems as valid as anything else
+        self.t1_s = 0.4 # s-variable was not originally included in NaKL (came from Arij). Constant tau_s = t0_s seems as valid as anything else
 
 
-        self.CaExt = 2500.0 # uM
-        self.k_s = 4.0 # uM
+        self.CaExt = 2000.0 # uM
+        self.k_Ca = 0.87 # uM
 
 
-        self.kCa = 0.01 # 1/ms
+        self.t_Ca = 20.0 # 1/ms
 #        self.kCa = 0.05 
-        self.bCa = 0.2 # uM
+        self.C0 = 0.15 # uM
         self.C = 1.0 # uF
         #self.C = 0.01 # uF
 
-        self.gSD = 0.5 #Conductances between Soma/Dendrite
+        self.gS = 0.3015 #Conductances between Soma/Dendrite
+        self.gD = self.gS#/75.0 #Conductances between Soma/Dendrite
+
 
 
         #PROBABLY NOT for estimation
-        self.Isa = 1000.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
-        self.f = 1.0 #unitless. Fraction of Free/Total cytosolic Ca^2+. Degenerate with params kCa, bCa.
+        self.Isa = 2.0 # Scaling for Iinj: Iinj/Isa should be in [nA]        
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
         
@@ -108,23 +97,26 @@ class NaKLCa_Neuron:
 
     #note, this is leak current, not L-type Ca
     def I_L(self, V):        return self.gL * (self.EL-V)
+    def I_Ld(self, V):       return self.gLd * (self.EL-V)
 
     # This is SK current from Arij's model. I *think* SK is a specific
     # class of Ca-gated K currents
-    def I_SK(self, V, Ca):
-        kinf = Ca**self.p/(Ca**self.p + self.k_s**self.p)
-        return self.gSK * kinf * (self.EK-V)
+    def I_KCa(self, V, Ca):
+        kinf = Ca**self.p/(Ca**self.p + self.k_Ca**self.p)
+        return self.gKCa * kinf * (self.EK-V)
 
+    def GHK(self, V, Ca, s):
+        return V * s**2 *(Ca - self.CaExt*sp.exp(-23.209*V/self.T))/(sp.exp(-23.209*V/self.T)-1)
+        
     def I_CaL(self, V, Ca,s):
         #23.209 is 2*F/R in K/mV
-        return (self.gCaL * V * s**2 
-                *(Ca- self.CaExt*sp.exp(-23.209*V/self.T))/(sp.exp(-23.209*V/self.T)-1))
+        return (self.gCaL * self.GHK(V,Ca,s))
         #    return gCaL * V * s**2 * (CaExt)/(1-sp.exp(23.209*V/T))
 
     def gating_inf(self, V,theta,sigma): 
     # Using exponential form for straightforward comparison with other
         # neuron models/parameters
-        return 1.0/(1+sp.exp((V-theta)/sigma))
+        return 0.5*(1.0+sp.tanh((V-theta)/sigma))
 
     def tau(self, V,t0,t1,theta,sigma):
         # I am using the exponetial form of x_inf(V), so there's a
@@ -147,13 +139,13 @@ class NaKLCa_Neuron:
         Vs, Vd, Ca, m, h, n, s = x            
 
         dVsdt = 1.0/self.C * (self.I_Na(Vs,m,h) + self.I_K(Vs,n) 
+                              + self.I_L(Vs) + self.gS*(Vd-Vs)) 
+
+        dVddt = 1.0/self.C * (self.I_KCa(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
                               + self.Iinj(t,current,tstep)/self.Isa 
-                              + self.I_L(Vs) + self.gSD*(Vd-Vs)) 
+                              + self.I_Ld(Vs) + self.gD*(Vs-Vd))
 
-        dVddt = 1.0/self.C * (self.I_SK(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
-                              + self.I_L(Vs) + self.gSD*(Vs-Vd))
-
-        dCadt = self.f*(self.phi*self.I_CaL(Vd,Ca,s) + self.kCa*(self.bCa - Ca))     
+        dCadt = self.phi*self.GHK(Vd,Ca,s) + (self.C0 - Ca)/self.t_Ca     
         dmdt = ((self.gating_inf(Vs,self.th_m,self.sig_m)-m)
                 / self.tau(Vs,self.t0_m,self.t1_m,self.th_m,self.sig_m))
         dhdt = ((self.gating_inf(Vs,self.th_h,self.sig_h)-h)
@@ -203,8 +195,8 @@ class NaKLCa_Neuron:
         ax2[0,1].set_title('I_K (\mu A/cm^2)')
         ax2[1,0].plot(times,self.I_L(sim[:,0]))
         ax2[1,0].set_title('I_L (\mu A/cm^2)')
-        ax2[1,1].plot(times,self.I_SK(sim[:,1], sim[:,2]))
-        ax2[1,1].set_title("I_SK (\mu A/cm^2)")
+        ax2[1,1].plot(times,self.I_KCa(sim[:,1], sim[:,2]))
+        ax2[1,1].set_title("I_KCa (\mu A/cm^2)")
         ax2[2,0].plot(times,self.I_CaL(sim[:,1],sim[:,2],sim[:,6]))
         ax2[2,0].set_title("I_CaL (\mu A/cm^2)")             
         fig2.tight_layout()
