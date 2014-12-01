@@ -36,7 +36,7 @@ class NaKLCa_Neuron:
         #gNa = 0.0
         self.gK = 20.0 
         self.gL = .30 
-        self.gSK = 50.0
+        self.gSK = 35.0
         self.gCaL = 0.015
         self.phi = 0.0001 # uM*cm^2/uA/ms
         #gCaL = 0.005 # mS/cm^2/uM(micromolar) - This is different because uses GHK form of current
@@ -82,7 +82,7 @@ class NaKLCa_Neuron:
 
 
         self.CaExt = 2500.0 # uM
-        self.k_s = 4.0 # uM
+        self.k_s = 2.3 # uM
 
 
         self.kCa = 0.01 # 1/ms
@@ -91,11 +91,11 @@ class NaKLCa_Neuron:
         self.C = 1.0 # uF
         #self.C = 0.01 # uF
 
-        self.gSD = 0.5 #Conductances between Soma/Dendrite
+        self.gSD = 1.0 #Conductances between Soma/Dendrite
 
 
         #PROBABLY NOT for estimation
-        self.Isa = 1000.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
+        self.Isa = 10.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
         self.f = 1.0 #unitless. Fraction of Free/Total cytosolic Ca^2+. Degenerate with params kCa, bCa.
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
