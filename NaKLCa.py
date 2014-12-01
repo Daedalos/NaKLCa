@@ -82,7 +82,7 @@ class NaKLCa_Neuron:
 
 
         self.CaExt = 2500.0 # uM
-        self.k_s = 2.3 # uM
+        self.k_s = 2.5 # uM
 
 
         self.kCa = 0.01 # 1/ms
@@ -95,7 +95,7 @@ class NaKLCa_Neuron:
 
 
         #PROBABLY NOT for estimation
-        self.Isa = 10.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
+        self.Isa = 6.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
         self.f = 1.0 #unitless. Fraction of Free/Total cytosolic Ca^2+. Degenerate with params kCa, bCa.
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
@@ -147,10 +147,10 @@ class NaKLCa_Neuron:
         Vs, Vd, Ca, m, h, n, s = x            
 
         dVsdt = 1.0/self.C * (self.I_Na(Vs,m,h) + self.I_K(Vs,n) 
-                              + self.Iinj(t,current,tstep)/self.Isa 
                               + self.I_L(Vs) + self.gSD*(Vd-Vs)) 
 
         dVddt = 1.0/self.C * (self.I_SK(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
+                              + self.Iinj(t,current,tstep)/self.Isa 
                               + self.I_L(Vs) + self.gSD*(Vs-Vd))
 
         dCadt = self.f*(self.phi*self.I_CaL(Vd,Ca,s) + self.kCa*(self.bCa - Ca))     
