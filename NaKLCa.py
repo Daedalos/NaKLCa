@@ -17,20 +17,17 @@ import matplotlib.pyplot as plt
 class NaKLCa_Neuron:
     def __init__(self):
         
-        # Initial Conditions
-        self.init = [-70.0, -70.0, 1.0, 0.1, 0.7, 0.1, 0.1]
-        # Total Integration time and 
-        self.Tfinal = 2400.0
-        # output time steps
-        self.dt = 0.01
+        self.init = [-70.0, -70.0, 1.0, 0.1, 0.7, 0.1, 0.1]         # Initial Conditions
+        self.Tfinal = 2500.0         # Total Integration time and 
+        self.dt = 0.01         # output time steps
 
         #Injected current file. Also need to specify time-step between
         #data points in file. Will linearly interpolate for intermediate
         #points
         self.inj = sp.loadtxt('current_sq_nA.txt')
-        #inj = sp.loadtxt('current_l63.txt')
-        self.injdt = 0.01
-
+        #self.inj = sp.loadtxt('current_l63.txt')
+        self.injdt = 1.0
+        self.Iscale = 1.0 # Scaling for Iinj: Iinj/Iscale should be in [nA]
 
 
         self.gNa = 1.20 # nS
@@ -66,18 +63,13 @@ class NaKLCa_Neuron:
         self.CaExt = 2500.0 # uM
         self.k_s = 2.5 # uM
 
-
         self.t_Ca = 50.0 # ms
         self.Ca0 = 0.2 # uM
         self.C = 0.01 # uF
 
-
         self.gSD = 0.01 #Conductances between Soma/Dendrite
 
-
         #PROBABLY NOT for estimation
-        self.Isa = 1.0 # Scaling for Iinj: Iinj/Isa should be in [nA]
-
         self.p = 2.0 #unitless. Exponent of hill fcn. Hardcoded in Arij model
         self.T = 290.0 #K . Temperature, Probably doesn't need to be estimated       
       
@@ -128,11 +120,12 @@ class NaKLCa_Neuron:
         Vs, Vd, Ca, m, h, n, s = x            
 
         dVsdt = 1.0/self.C * (self.I_Na(Vs,m,h) + self.I_K(Vs,n) 
+                              #+ self.Iinj(t,current,tstep)/self.Iscale 
                               + self.I_L(Vs) + self.gSD*(Vd-Vs)) 
 
         dVddt = 1.0/self.C * (self.I_KCa(Vd,Ca) + self.I_CaL(Vd,Ca,s) 
-                              + self.Iinj(t,current,tstep)/self.Isa 
-                              + self.I_L(Vs) + self.gSD*(Vs-Vd))
+                              + self.Iinj(t,current,tstep)/self.Iscale 
+                              + self.I_L(Vd) + self.gSD*(Vs-Vd))
 
         dCadt = self.phi*self.I_CaL(Vd,Ca,s) + (self.Ca0 - Ca)/self.t_Ca
         dmdt = ((self.gating_inf(Vs,self.th_m,self.sig_m)-m)
@@ -191,22 +184,25 @@ class NaKLCa_Neuron:
         fig2.tight_layout()
 
         ttmp = sp.arange(0,self.Tfinal,self.injdt)
-        ax2[2,1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
+        ax2[2,1].plot(ttmp, self.inj[:len(ttmp)]/self.Iscale)
         ax2[2,1].set_title("I_Inj")
 #
-#        fig3, ax3 = plt.subplots(2,1,sharex=True)
-#
-#        ax3[0].plot(times, sim[:,0])
-#        ax3[0].set_title("Voltage (mV)")
-#        ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Isa)
-#        ax3[1].set_title("Inj Current")
-#        fig3.tight_layout()
+        fig3, ax3 = plt.subplots(2,1,sharex=True)
+
+        ax3[0].plot(times, sim[:,0])
+        ax3[0].set_title("Voltage (mV)")
+        ax3[1].plot(ttmp, self.inj[:len(ttmp)]/self.Iscale)
+        ax3[1].set_title("Inj Current")
+        fig3.tight_layout()
 
         plt.show()
         
 if __name__ == '__main__':
 
     neuron1 = NaKLCa_Neuron()
+    neuron1.run()
+    neuron1.plot()
+
 #    t0_sinit = neuron1.t0_s
 #    t1_sinit = neuron1.t1_s
 #    fig, ax = plt.subplots(6, sharex=True)
@@ -225,7 +221,5 @@ if __name__ == '__main__':
 #    plt.show()
 
 
-    neuron1.run()
-    neuron1.plot()
     
     
